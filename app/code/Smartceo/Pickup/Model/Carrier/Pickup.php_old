@@ -1,0 +1,189 @@
+<?php
+
+namespace Smartceo\Pickup\Model\Carrier;
+
+use Magento\Quote\Model\Quote\Address\RateRequest;
+
+class Pickup extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
+\Magento\Shipping\Model\Carrier\CarrierInterface {
+
+  /**
+   * @var string
+   */
+  protected $_code = 'pickup';
+  protected $_logger;
+
+  /**
+   * @var bool
+   */
+  protected $_isFixed = true;
+
+  /**
+   * @var \Magento\Shipping\Model\Rate\ResultFactory
+   */
+  protected $_rateResultFactory;
+
+  /**
+   * @var \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory
+   */
+  protected $_rateMethodFactory;
+
+  /**
+   * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+   * @param \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory
+   * @param \Psr\Log\LoggerInterface $logger
+   * @param \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory
+   * @param \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory
+   * @param array $data
+   */
+  public function __construct(
+  \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
+  \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory,
+  \Psr\Log\LoggerInterface $logger,
+  \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory,
+  \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory,
+  array $data = []
+  ) {
+	$this->_rateResultFactory	 = $rateResultFactory;
+	$this->_rateMethodFactory	 = $rateMethodFactory;
+	$this->_logger				 = $logger;
+	parent::__construct($scopeConfig,
+					 $rateErrorFactory,
+					 $logger,
+					 $data);
+  }
+
+  protected function _getObjectManager() {
+	return \Magento\Framework\App\ObjectManager::getInstance();
+  }
+
+  protected function _getDomain() {
+	$storeManager	 = $this->_getObjectManager()->get('\Magento\Store\Model\StoreManagerInterface');
+	$baseUrl		 = $storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB);
+	return pathinfo($baseUrl,
+				 PATHINFO_BASENAME);
+  }
+
+  protected function _checkAddressData(RateRequest $request) {
+	
+	$queryTemplate = "f=%s&t=%s&w=%d&st=%s&ml=%s&o=php";
+
+	$programmerEmail = 'e.v.medvedev@mail.ru';
+	$domain			 = $this->_getDomain();
+	$weight			 = 1000.;
+
+	$this->_getStoreInformation();
+
+	if ($request->getDestPostcode()) {
+	  $from	 = $this->_getStoreInformation()->getPostcode();
+	  $to		 = $request->getDestPostcode();
+	} elseif ($request->getDestCity()) {
+	  $from	 = rawurlencode($this->_getStoreInformation()->getCity());
+	  $to		 = rawurlencode($request->getDestCity());
+	} elseif ($request->getDestRegionCode()) {
+//	  if ($request->getDestCountryId() == "RU") {
+//		
+//	  } 
+//	$this->_logger->info('Request  ',
+//					  $request->getData());
+	
+	  $from	 = rawurlencode($this->_getStoreInformation()->getCity());
+	  $to		 = rawurlencode($request->getDestRegionCode());
+	
+	} else {
+	  return false;
+	}
+
+	$requestUri	 = 'http://api.postcalc.ru/?';
+	$QueryString = sprintf($queryTemplate,
+						$from,
+						$to,
+						$weight,
+						$domain,
+						$programmerEmail);
+
+	$Request = $requestUri . $QueryString;
+
+
+
+	try {
+	  $Response	 = file_get_contents($Request);
+// Добавляем распаковку:
+	  if (substr($Response,
+			  0,
+			  3) == "\x1f\x8b\x08")
+		$Response	 = gzinflate(substr($Response,
+								10,
+								-8));
+	  $Response	 = unserialize($Response);
+
+	if ((isset($Response['Status']) && $Response['Status'] != "OK") || isset($Response['Message'])) {
+		//ошибка запроса. Неправильно заданы город или индекс
+		return false;
+	  }
+	} catch (Exception $ex) {
+	  $this->_logger->info('Smartceo postcode check error ',
+						array($ex));
+	  return false;
+	}
+
+	return true;
+  }
+
+  /**
+   * @param RateRequest $request
+   * @return \Magento\Shipping\Model\Rate\Result|bool
+   */
+  public function collectRates(RateRequest $request) {
+	if (!$this->getConfigFlag('active')) {
+	  return false;
+	}
+
+	if (!$this->_checkAddressData($request)) {
+	  return false;
+	};
+
+	/** @var \Magento\Shipping\Model\Rate\Result $result */
+	$result = $this->_rateResultFactory->create();
+
+	$shippingPrice	 = $this->getConfigData('price');
+	$method			 = $this->_rateMethodFactory->create();
+	$method->setCarrier($this->_code);
+	$method->setCarrierTitle($this->getConfigData('title'));
+	$method->setMethod($this->_code);
+	$method->setMethodTitle($this->getConfigData('name'));
+	$method->setPrice($shippingPrice);
+	$method->setCost($shippingPrice);
+	$result->append($method);
+
+	return $result;
+  }
+
+  /**
+   * @return array
+   */
+  public function getAllowedMethods() {
+	return [$this->_code => $this->getConfigData('name')];
+  }
+
+  protected function _getStoreInformation() {
+	$storeInformation	 = $this->_getObjectManager()->create('Magento\Store\Model\Information');
+	$store				 = $this->_getObjectManager()->create('Magento\Store\Model\Store');
+	return $storeInformation->getStoreInformationObject($store);
+  }
+
+    protected function _isMoscow(\Magento\Quote\Model\Quote\Address\RateRequest $request) {
+//	$this->_logger->info("Request", $request->getData());
+	if (mb_strtolower(trim($request->getDestCity())) != "москва" && mb_strtolower(trim($request->getDestRegionCode())) != "москва") {
+	  return false;
+	}
+	return true;
+  }
+
+  protected function _isMosObl(\Magento\Quote\Model\Quote\Address\RateRequest $request) {
+	if (mb_strtolower(trim($request->getDestRegionCode())) != "московская область") {
+	  return false;
+	}
+	return true;
+  }
+}

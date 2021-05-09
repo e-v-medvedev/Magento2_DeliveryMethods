@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Store/etc/config.xsd">
+    <default>
+        <carriers>
+            <!-- курьер CDOLLS в пределах МКАД -->
+            <courier>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Smartceo\Courier\Model\Carrier\Courier</model>
+                <name>Доставка курьером по Москве в пределах МКАД</name>
+                <price>0.00</price>
+                <title>Доставка по Москве в пределах МКАД</title>
+                <specificerrmsg>Smartceo Courier Shipping is not available for your area. Please contact us.</specificerrmsg>
+            </courier>
+
+            <!-- курьер CDOLLS по Москве 5 км за пределами МКАД -->
+            <courierm1>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Smartceo\Courier\Model\Carrier\CourierMoscowOutsideMoscowRingFirstZone</model>
+                <name>Доставка курьером CDOLLS.RU по Москве до 5 км. от МКАД</name>
+                <price>0.00</price>
+                <title>Доставка в новую Москву до 5 от МКАД</title>
+                <specificerrmsg>Smartceo Courier Shipping is not available for your area. Please contact us.</specificerrmsg>
+            </courierm1>
+            
+            <!-- курьер CDOLLS по Москве 20 км за пределами МКАД -->
+            <courierm2>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Smartceo\Courier\Model\Carrier\CourierMoscowOutsideMoscowRingSecondZone</model>
+                <name>Доставка курьером CDOLLS.RU по Москве от 5 до 20 км. от МКАД</name>
+                <price>0.00</price>
+                <title>Доставка в новую Москву от 5 до 20 от МКАД</title>
+                <specificerrmsg>Smartceo Courier Shipping is not available for your area. Please contact us.</specificerrmsg>
+            </courierm2>
+                        
+            <!-- курьер CDOLLS по Московской области 5 км от МКАД -->
+            <couriermo1>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Smartceo\Courier\Model\Carrier\CourierMoFirstZone</model>
+                <name>Доставка курьером по Московской области до 5 км. от МКАД</name>
+                <price>0.00</price>
+                <title>Доставка в Московскую область до 5 от МКАД</title>
+                <specificerrmsg>Smartceo Courier Shipping is not available for your area. Please contact us.</specificerrmsg>
+            </couriermo1>
+            
+            <!-- курьер CDOLLS по Московской области 20 км от МКАД -->
+            <couriermo2>
+                <active>1</active>
+                <sallowspecific>0</sallowspecific>
+                <model>Smartceo\Courier\Model\Carrier\CourierMoSecondZone</model>
+                <name>Доставка курьером по Московской области от 5 до 20 км. от МКАД</name>
+                <price>0.00</price>
+                <title>Доставка в Московскую область от 5 до 20 от МКАД</title>
+                <specificerrmsg>Smartceo Courier Shipping is not available for your area. Please contact us.</specificerrmsg>
+            </couriermo2>
+         
+        </carriers>
+    </default>
+</config>
